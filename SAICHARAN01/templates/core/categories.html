@@ -1,0 +1,89 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Categories | Personal Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 fw-bold mb-1">Expense Categories</h1>
+        <p class="text-secondary mb-0">Organize and manage your personal spending categories</p>
+    </div>
+    <a href="{% url 'category_create' %}" class="btn btn-primary d-flex align-items-center gap-2">
+        <i class="bi bi-plus-lg"></i>
+        <span>Add Category</span>
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card p-0 bg-white overflow-hidden">
+            {% if categories %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Category Name</th>
+                                <th>Description</th>
+                                <th class="text-center">Associated Expenses</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in categories %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="p-2 bg-primary-subtle rounded text-primary">
+                                                <i class="bi bi-tag-fill"></i>
+                                            </div>
+                                            <span class="fw-bold text-dark">{{ category.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted small">
+                                            {{ category.description|default:"No description provided" }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-secondary border">
+                                            {{ category.expenses.count }} expense{{ category.expenses.count|pluralize }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="d-inline-flex gap-2">
+                                            <a href="{% url 'category_update' category.pk %}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                <i class="bi bi-pencil me-1"></i> Edit
+                                            </a>
+                                            {% if category.expenses.exists %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger" disabled title="Cannot delete: active expenses exist">
+                                                    <i class="bi bi-lock me-1"></i> Locked
+                                                </button>
+                                            {% else %}
+                                                <form method="post" action="{% url 'category_delete' category.pk %}" onsubmit="return confirm('Are you sure you want to delete category \'{{ category.name }}\'?');" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                        <i class="bi bi-trash me-1"></i> Delete
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-tags text-secondary display-4 d-block mb-3"></i>
+                    <h5 class="fw-bold text-muted">No Categories Found</h5>
+                    <p class="text-muted small mb-3">Get started by creating categories like Groceries, Rent, Utilities, or Entertainment.</p>
+                    <a href="{% url 'category_create' %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-lg me-1"></i> Create Your First Category
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

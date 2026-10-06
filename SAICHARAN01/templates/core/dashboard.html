@@ -1,0 +1,300 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Dashboard | Personal Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4 g-3">
+    <div class="col-md-7">
+        <h1 class="h3 fw-bold mb-1">Expense &amp; Budget Dashboard</h1>
+        <p class="text-secondary mb-0">Overview for <strong class="text-dark">{{ current_month_display }}</strong></p>
+    </div>
+    <div class="col-md-5">
+        <form method="get" action="{% url 'dashboard' %}" class="d-flex align-items-center justify-content-md-end gap-2">
+            <label for="month-select" class="small text-muted fw-semibold text-nowrap">Filter Month:</label>
+            <input type="month" id="month-select" name="month" class="form-control form-control-sm w-auto" value="{{ current_month_str }}" onchange="this.form.submit()">
+            <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary">Current</a>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card stat-spent p-4 bg-white">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="text-muted fw-semibold text-uppercase small">Total Monthly Spending</span>
+                    <h2 class="fw-bold mt-2 mb-0 text-danger">${{ total_spent|floatformat:2 }}</h2>
+                </div>
+                <div class="p-3 bg-danger-subtle rounded-3 text-danger fs-4">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+            </div>
+            <div class="mt-3 small text-muted">
+                Expenses recorded in {{ current_month_display }}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card stat-budget p-4 bg-white">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="text-muted fw-semibold text-uppercase small">Total Monthly Budget</span>
+                    <h2 class="fw-bold mt-2 mb-0 text-primary">${{ total_budget|floatformat:2 }}</h2>
+                </div>
+                <div class="p-3 bg-primary-subtle rounded-3 text-primary fs-4">
+                    <i class="bi bi-piggy-bank"></i>
+                </div>
+            </div>
+            <div class="mt-3 small text-muted">
+                Allocated across {{ category_summaries|length }} budget categor{{ category_summaries|length|pluralize:"y,ies" }}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card stat-remaining p-4 bg-white">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="text-muted fw-semibold text-uppercase small">Total Remaining</span>
+                    <h2 class="fw-bold mt-2 mb-0 {% if total_remaining < 0 %}text-danger{% else %}text-success{% endif %}">
+                        ${{ total_remaining|floatformat:2 }}
+                    </h2>
+                </div>
+                <div class="p-3 {% if total_remaining < 0 %}bg-danger-subtle text-danger{% else %}bg-success-subtle text-success{% endif %} rounded-3 fs-4">
+                    <i class="bi {% if total_remaining < 0 %}bi-exclamation-triangle{% else %}bi-check-circle{% endif %}"></i>
+                </div>
+            </div>
+            <div class="mt-3 small">
+                {% if total_budget > 0 %}
+                    <span class="badge {{ overall_status.badge_class }}">{{ overall_status.label }}</span>
+                    <span class="text-muted ms-1">({{ overall_status.percentage }}% spent)</span>
+                {% else %}
+                    <span class="text-muted">No budgets configured yet</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Budget Alerts & Progress -->
+    <div class="col-lg-7">
+        <div class="card p-4 bg-white h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 fw-bold mb-0">
+                    <i class="bi bi-shield-check text-primary me-2"></i>Budget Alerts &amp; Category Limits
+                </h2>
+                <a href="{% url 'budget_create' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-plus-lg me-1"></i> Add Budget
+                </a>
+            </div>
+
+            {% if category_summaries %}
+                <div class="d-flex flex-column gap-3">
+                    {% for item in category_summaries %}
+                        <div class="p-3 rounded-3 border bg-light">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <h3 class="h6 fw-bold mb-0 text-dark">{{ item.category.name }}</h3>
+                                    <small class="text-muted">
+                                        Budget: ${{ item.limit|floatformat:2 }} | Spent: <span class="fw-semibold text-dark">${{ item.spent|floatformat:2 }}</span>
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <!-- Visual Alert Badge -->
+                                    <span class="badge {{ item.badge_class }} badge-status">
+                                        {% if item.status == 'normal' %}
+                                            <i class="bi bi-check-circle me-1"></i> Normal (&lt; 80%)
+                                        {% elif item.status == 'warning' %}
+                                            <i class="bi bi-exclamation-circle me-1"></i> Warning (80% - 99.9%)
+                                        {% else %}
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Danger (&ge; 100%)
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Progress Bar -->
+                            <div class="progress mb-2" style="height: 10px;">
+                                <div class="progress-bar {{ item.badge_class }}" role="progressbar" 
+                                     style="width: {% if item.percentage > 100 %}100{% else %}{{ item.percentage }}{% endif %}%;" 
+                                     aria-valuenow="{{ item.percentage }}" aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center small">
+                                <span class="text-secondary">
+                                    {{ item.percentage }}% consumed
+                                </span>
+                                <span class="fw-semibold {% if item.remaining < 0 %}text-danger{% else %}text-success{% endif %}">
+                                    Remaining: ${{ item.remaining|floatformat:2 }}
+                                </span>
+                            </div>
+
+                            {% if item.status == 'danger' %}
+                                <div class="alert alert-danger py-1 px-2 mt-2 mb-0 small d-flex align-items-center gap-2">
+                                    <i class="bi bi-exclamation-octagon-fill"></i>
+                                    <span><strong>Budget Exceeded!</strong> You have overspent by ${{ item.remaining|stringformat:".2f"|slice:"1:" }}.</span>
+                                </div>
+                            {% elif item.status == 'warning' %}
+                                <div class="alert alert-warning py-1 px-2 mt-2 mb-0 small d-flex align-items-center gap-2">
+                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                    <span><strong>Warning:</strong> You are nearing your monthly threshold.</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-pie-chart text-secondary display-4 d-block mb-3"></i>
+                    <p class="text-muted mb-3">No budgets have been configured for {{ current_month_display }}.</p>
+                    <a href="{% url 'budget_create' %}" class="btn btn-primary btn-sm">Set Your First Budget</a>
+                </div>
+            {% endif %}
+
+            {% if unbudgeted_categories %}
+                <hr class="my-4">
+                <h3 class="h6 fw-bold text-secondary mb-3">Unbudgeted Category Spending</h3>
+                <div class="list-group list-group-flush">
+                    {% for unb in unbudgeted_categories %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                            <span><i class="bi bi-tag text-muted me-2"></i>{{ unb.category.name }}</span>
+                            <span class="badge bg-secondary-subtle text-dark">${{ unb.spent|floatformat:2 }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right Column: Add Expense Form & Quick Actions -->
+    <div class="col-lg-5">
+        <!-- Add Expense Card -->
+        <div class="card p-4 bg-white mb-4">
+            <h2 class="h5 fw-bold mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-plus-circle text-primary"></i>
+                <span>Record New Expense</span>
+            </h2>
+
+            {% if not has_categories %}
+                <div class="alert alert-info small mb-0">
+                    <i class="bi bi-info-circle-fill me-1"></i>
+                    You must create at least one category before logging expenses.
+                    <a href="{% url 'category_create' %}" class="alert-link d-block mt-2">Create a Category now &rarr;</a>
+                </div>
+            {% else %}
+                <form method="post" action="{% url 'expense_create' %}" novalidate>
+                    {% csrf_token %}
+
+                    {% if expense_form.non_field_errors %}
+                        <div class="alert alert-danger small py-2 mb-3">
+                            {% for error in expense_form.non_field_errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Category Field -->
+                    <div class="mb-3">
+                        <label for="{{ expense_form.category.id_for_label }}" class="form-label small fw-semibold">Category <span class="text-danger">*</span></label>
+                        {{ expense_form.category }}
+                        {% if expense_form.category.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in expense_form.category.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <!-- Amount Field -->
+                        <div class="col-6">
+                            <label for="{{ expense_form.amount.id_for_label }}" class="form-label small fw-semibold">Amount ($) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                {{ expense_form.amount }}
+                            </div>
+                            {% if expense_form.amount.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in expense_form.amount.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Date Field -->
+                        <div class="col-6">
+                            <label for="{{ expense_form.date.id_for_label }}" class="form-label small fw-semibold">Date <span class="text-danger">*</span></label>
+                            {{ expense_form.date }}
+                            {% if expense_form.date.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in expense_form.date.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Notes Field -->
+                    <div class="mb-3">
+                        <label for="{{ expense_form.notes.id_for_label }}" class="form-label small fw-semibold">Notes (Optional)</label>
+                        {{ expense_form.notes }}
+                        {% if expense_form.notes.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in expense_form.notes.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 fw-semibold py-2">
+                        <i class="bi bi-check2-circle me-1"></i> Save Expense
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+
+        <!-- Recent Expenses in this Month -->
+        <div class="card p-4 bg-white">
+            <h2 class="h6 fw-bold mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-clock-history text-secondary me-1"></i> Recent Expenses</span>
+                <span class="badge bg-light text-muted border">{{ recent_expenses|length }} logged</span>
+            </h2>
+
+            {% if recent_expenses %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-light small text-muted">
+                            <tr>
+                                <th>Category</th>
+                                <th>Date</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for exp in recent_expenses %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold text-dark">{{ exp.category.name }}</div>
+                                        {% if exp.notes %}<small class="text-muted d-block text-truncate" style="max-width: 140px;">{{ exp.notes }}</small>{% endif %}
+                                    </td>
+                                    <td class="small text-muted text-nowrap">{{ exp.date|date:"M d" }}</td>
+                                    <td class="text-end fw-bold text-dark">${{ exp.amount|floatformat:2 }}</td>
+                                    <td class="text-center">
+                                        <form method="post" action="{% url 'expense_delete' exp.pk %}" onsubmit="return confirm('Delete this expense?');" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-link text-danger p-0 border-0" title="Delete expense">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted small text-center my-3">No expenses recorded for this month yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

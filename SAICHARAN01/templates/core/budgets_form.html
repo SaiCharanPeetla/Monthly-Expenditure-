@@ -1,0 +1,78 @@
+{% extends 'core/base.html' %}
+
+{% block title %}{{ title }} | Personal Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="card p-4 p-md-5 bg-white">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h1 class="h4 fw-bold mb-0">{{ title }}</h1>
+                <a href="{% url 'budget_list' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Budgets
+                </a>
+            </div>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger py-2 small mb-3">
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label for="{{ form.category.id_for_label }}" class="form-label small fw-semibold">
+                        Category <span class="text-danger">*</span>
+                    </label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.category.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ form.monthly_limit.id_for_label }}" class="form-label small fw-semibold">
+                        Monthly Limit ($) <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        {{ form.monthly_limit }}
+                    </div>
+                    <div class="form-text small text-muted">Must be greater than 0.00</div>
+                    {% if form.monthly_limit.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.monthly_limit.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-4">
+                    <label for="{{ form.month_year.id_for_label }}" class="form-label small fw-semibold">
+                        Target Month &amp; Year <span class="text-danger">*</span>
+                    </label>
+                    {{ form.month_year }}
+                    <div class="form-text small text-muted">Select any date in the target month (e.g. 2026-10-01)</div>
+                    {% if form.month_year.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.month_year.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'budget_list' %}" class="btn btn-light border px-4">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-check-lg me-1"></i> Save Budget
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
